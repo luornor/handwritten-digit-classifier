@@ -14,6 +14,7 @@ sys.path.append(str(PROJECT_ROOT / "src"))
 from model_utils import (  # noqa: E402
     load_digit_sample,
     load_model_bundle,
+    model_input_shape,
     normalize_pixels,
     predict_digit,
     preprocess_uploaded_image,
@@ -32,12 +33,19 @@ class ModelUtilsTest(unittest.TestCase):
         self.assertLessEqual(result["top_probabilities"][0]["probability"], 1)
 
     def test_normalize_pixels_accepts_flat_or_image_shape(self) -> None:
-        flat = np.arange(64)
-        image = np.arange(64).reshape(8, 8)
+        shape = model_input_shape(load_model_bundle())
+        size = int(np.prod(shape))
+        flat = np.arange(size)
+        image = np.arange(size).reshape(shape)
 
-        self.assertEqual(normalize_pixels(flat).shape, (1, 64))
-        self.assertEqual(normalize_pixels(image).shape, (1, 64))
-        self.assertTrue(np.all(normalize_pixels(flat) <= 16))
+        normalized_flat = normalize_pixels(flat, input_shape=shape)
+        normalized_image = normalize_pixels(image, input_shape=shape)
+        self.assertEqual(normalized_flat.shape, (1, size))
+        self.assertEqual(normalized_image.shape, (1, size))
+        self.assertTrue(np.all(normalized_flat <= 1.0))
+
+        with self.assertRaises(ValueError):
+            normalize_pixels(np.arange(64), input_shape=shape)
 
     def test_preprocess_uploaded_image_returns_model_input(self) -> None:
         image = Image.new("L", (64, 64), 255)
@@ -46,9 +54,10 @@ class ModelUtilsTest(unittest.TestCase):
 
         pixels = preprocess_uploaded_image(image)
 
-        self.assertEqual(pixels.shape, (1, 64))
+        shape = model_input_shape(load_model_bundle())
+        self.assertEqual(pixels.shape, (1, int(np.prod(shape))))
         self.assertGreaterEqual(float(pixels.min()), 0.0)
-        self.assertLessEqual(float(pixels.max()), 16.0)
+        self.assertLessEqual(float(pixels.max()), 1.0)
 
 
 if __name__ == "__main__":

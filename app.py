@@ -13,7 +13,10 @@ sys.path.append(str(PROJECT_ROOT / "src"))
 
 from model_utils import (  # noqa: E402
     load_digit_sample,
+    load_sample_gallery,
     load_model_bundle,
+    model_input_shape,
+    model_pixel_range,
     predict_digit,
     preprocess_uploaded_image,
 )
@@ -30,6 +33,7 @@ def get_model_bundle() -> dict:
 def show_prediction(pixels, true_label=None) -> None:
     bundle = get_model_bundle()
     result = predict_digit(bundle, pixels, top_k=5)
+    top_probability = result["top_probabilities"][0]["probability"]
     probabilities = pd.DataFrame(result["top_probabilities"])
     probabilities["probability"] = probabilities["probability"].round(4)
     probabilities = probabilities.set_index("digit")
@@ -40,6 +44,8 @@ def show_prediction(pixels, true_label=None) -> None:
         col_b.metric("Dataset label", true_label)
 
     st.bar_chart(probabilities)
+    if top_probability < 0.65:
+        st.warning("Low confidence. Try a clearer, centered, single digit image.")
 
 
 st.title("Handwritten Digit Classifier")
@@ -47,7 +53,13 @@ st.title("Handwritten Digit Classifier")
 input_mode = st.sidebar.radio("Input", ["Dataset sample", "Upload image"])
 
 if input_mode == "Dataset sample":
-    sample_index = st.sidebar.slider("Sample", min_value=0, max_value=1796, value=12)
+    gallery = load_sample_gallery()
+    sample_index = st.sidebar.slider(
+        "Sample",
+        min_value=0,
+        max_value=len(gallery["labels"]) - 1,
+        value=min(12, len(gallery["labels"]) - 1),
+    )
     pixels, true_label, image = load_digit_sample(sample_index)
 
     st.image(image, caption=f"Sample {sample_index}", width=220, clamp=True)
@@ -60,7 +72,12 @@ else:
         st.stop()
 
     uploaded_image = Image.open(uploaded_file)
-    pixels = preprocess_uploaded_image(uploaded_image)
+    bundle = get_model_bundle()
+    pixels = preprocess_uploaded_image(
+        uploaded_image,
+        input_shape=model_input_shape(bundle),
+        pixel_range=model_pixel_range(bundle),
+    )
 
     st.image(uploaded_image, caption="Uploaded image", width=260)
     show_prediction(pixels)

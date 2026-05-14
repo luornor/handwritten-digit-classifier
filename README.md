@@ -1,18 +1,18 @@
 # Handwritten Digit Classifier
 
-This project trains and deploys a lightweight classifier for handwritten digits from 0 to 9. It modernizes the old MNIST/Keras notebook into a small scikit-learn project with a Streamlit demo, reusable preprocessing, tests, and CI.
+This project trains and deploys a lightweight classifier for handwritten digits from 0 to 9. It modernizes the old notebook into a Streamlit demo with MNIST-scale 28x28 inputs, augmentation, reusable preprocessing, tests, and CI.
 
 ## Why this project is useful
 
-- Uses image-like 8x8 pixel data from scikit-learn's built-in digits dataset.
-- Trains a support-vector classifier inside a reproducible preprocessing pipeline.
-- Reports accuracy, macro F1, cross-validation accuracy, and confusion matrix.
+- Uses MNIST from OpenML for more realistic 28x28 handwritten digit images.
+- Trains a compact neural network with rotation and shift augmentation.
+- Reports accuracy, macro F1, training sample counts, and confusion matrix.
 - Includes CLI prediction, image-upload preprocessing, and a Streamlit app.
 - Includes a model card and GitHub Actions workflow.
 
 ## Dataset
 
-The project uses the scikit-learn digits dataset. No external download is required.
+The model is trained from OpenML's `mnist_784` dataset. Training downloads the dataset once into `data_cache/`, which is ignored by Git. The deployed app does not need to download the dataset because the trained model and a small sample gallery are committed.
 
 ## Run locally
 
@@ -29,7 +29,15 @@ streamlit run app.py
 The training script writes:
 
 - `models/digit_classifier.joblib`
+- `models/sample_gallery.npz`
 - `reports/metrics.json`
+
+## Current result
+
+The upgraded model was trained on 20,000 MNIST samples plus 20,000 augmented samples and evaluated on 10,000 holdout samples:
+
+- Accuracy: 97.58%
+- Macro F1: 97.56%
 
 ## Deploy
 
@@ -41,12 +49,12 @@ Recommended platform: Streamlit Community Cloud.
 4. Keep the Python version from `runtime.txt`.
 5. Deploy.
 
-The saved model is already included in `models/digit_classifier.joblib`, so the app can start without retraining. The CI workflow still retrains during checks to make sure the code stays reproducible.
+The saved model is already included in `models/digit_classifier.joblib`, and the app sample browser uses `models/sample_gallery.npz`, so the app can start without retraining.
 
 ## Model choice
 
-An SVM is used here because the dataset is small and the goal is a compact portfolio project. A CNN would be a good follow-up if this project is expanded with full MNIST or Fashion-MNIST.
+The model uses scikit-learn's `MLPClassifier` instead of a CNN to keep deployment light on Streamlit while still moving beyond the original 8x8 SVM baseline. A CNN can still be a future upgrade if the deployment target can comfortably support TensorFlow or PyTorch.
 
 ## Limitations
 
-This model is trained on clean 8x8 digit images. Uploaded phone photos or stylized handwriting may be less accurate, even with preprocessing. See `MODEL_CARD.md` for the full model notes.
+This model is stronger than the original 8x8 baseline, but unusual handwriting, cluttered photos, rotated pages, and multi-digit uploads can still fail. See `MODEL_CARD.md` for the full model notes.
