@@ -3,6 +3,7 @@
   "macro_f1": 0.9805015284652674,
   "cv_accuracy_mean": 0.9798223964382501,
   "cv_accuracy_std": 0.006369014139636586,
+  "final_model_training_rows": 1797,
   "confusion_matrix": [
     [
       36,

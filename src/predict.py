@@ -2,15 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
-import joblib
 import numpy as np
-from sklearn.datasets import load_digits
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = PROJECT_ROOT / "models" / "digit_classifier.joblib"
+from model_utils import load_digit_sample, load_model_bundle, predict_digit
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,35 +25,22 @@ def parse_args() -> argparse.Namespace:
 def load_input(args: argparse.Namespace) -> tuple[np.ndarray, int | None]:
     if args.pixels_json:
         values = np.asarray(json.loads(args.pixels_json), dtype=float)
-        if values.shape != (64,):
-            raise ValueError(f"Expected 64 pixel values, got shape {values.shape}.")
-        return values.reshape(1, -1), None
+        return values, None
 
-    data = load_digits()
-    if args.sample_index < 0 or args.sample_index >= len(data.data):
-        raise ValueError(f"sample-index must be between 0 and {len(data.data) - 1}.")
-    return data.data[args.sample_index].reshape(1, -1), int(data.target[args.sample_index])
+    pixels, true_label, _ = load_digit_sample(args.sample_index)
+    return pixels, true_label
 
 
 def main() -> None:
     args = parse_args()
-    bundle = joblib.load(MODEL_PATH)
-    model = bundle["model"]
+    bundle = load_model_bundle()
     row, true_label = load_input(args)
 
-    predicted = int(model.predict(row)[0])
-    probabilities = model.predict_proba(row)[0]
+    result = predict_digit(bundle, row)
     output = {
-        "prediction": predicted,
+        "prediction": result["prediction"],
         "true_label": true_label,
-        "top_probabilities": [
-            {"digit": int(index), "probability": round(float(probability), 4)}
-            for index, probability in sorted(
-                enumerate(probabilities),
-                key=lambda item: item[1],
-                reverse=True,
-            )[:3]
-        ],
+        "top_probabilities": result["top_probabilities"],
     }
     print(json.dumps(output, indent=2))
 

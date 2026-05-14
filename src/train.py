@@ -5,6 +5,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import sklearn
 from sklearn.datasets import load_digits
 from sklearn.metrics import (
     accuracy_score,
@@ -69,6 +70,7 @@ def main() -> None:
         "macro_f1": float(f1_score(y_test, predictions, average="macro")),
         "cv_accuracy_mean": float(np.mean(cv_scores)),
         "cv_accuracy_std": float(np.std(cv_scores)),
+        "final_model_training_rows": int(len(data.data)),
         "confusion_matrix": confusion_matrix(y_test, predictions).tolist(),
         "classification_report": classification_report(
             y_test,
@@ -77,12 +79,18 @@ def main() -> None:
         ),
     }
 
+    final_model = build_model()
+    final_model.fit(data.data, data.target)
+
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
         {
-            "model": model,
+            "model": final_model,
             "image_shape": data.images[0].shape,
             "target_names": [str(target) for target in data.target_names],
+            "dataset": "sklearn.datasets.load_digits",
+            "model_type": "SVC(kernel='rbf')",
+            "sklearn_version": sklearn.__version__,
         },
         MODEL_PATH,
     )
